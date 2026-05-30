@@ -131,9 +131,9 @@ If you can't determine a field, use empty string or null for amount."""
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {
-                        "url": f"data:application/pdf;base64,{b64}",
-                        "detail": "low",
+                    {"type": "file", "file": {
+                        "filename": path.name,
+                        "file_data": f"data:application/pdf;base64,{b64}",
                     }},
                 ],
             }],

@@ -27,6 +27,7 @@ CATEGORY_LABELS = {
     "suministros": "Suministros",
     "transporte": "Transporte",
     "vivienda": "Vivienda",
+    "actividad_profesional": "Actividad profesional",
     "potencialmente_deducible": "Potencial deducible",
     "no_deducible": "No deducible",
     "ingreso": "Ingresos",
@@ -99,7 +100,7 @@ def _create_summary_sheet(wb, expenses: list[ClassifiedExpense], year: int) -> N
 
     categories_order = [
         "sanitario", "formacion", "donaciones", "seguros",
-        "suministros", "transporte", "vivienda",
+        "suministros", "transporte", "vivienda", "actividad_profesional",
         "potencialmente_deducible", "no_deducible",
     ]
 

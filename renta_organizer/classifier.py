@@ -10,33 +10,25 @@ from renta_organizer.bank_parser import BankTransaction
 
 logger = logging.getLogger(__name__)
 
-FISCAL_CATEGORIES = [
-    "sanitario",
-    "formacion",
-    "donaciones",
-    "seguros",
-    "suministros",
-    "transporte",
-    "vivienda",
-    "potencialmente_deducible",
-    "no_deducible",
-]
-
 SYSTEM_PROMPT = """You classify personal expenses for a Spanish IRPF tax declaration.
 The taxpayer is a self-employed (autónomo) resident in Comunitat Valenciana.
 
 Categories (pick ONE):
-- sanitario: medical, dental, pharmacy, optical, hospital, physio, health insurance copays
-- formacion: courses, books, educational materials, certifications
-- donaciones: NGOs, foundations, political parties, charity
-- seguros: health insurance, life insurance, home insurance
-- suministros: electricity, water, gas, internet, mobile phone
-- transporte: fuel, tolls, public transport, parking (work-related)
-- vivienda: home repairs, maintenance, energy efficiency improvements
+- sanitario: medical, dental, pharmacy, optical, hospital, physio, health insurance copays, psychology, veterinary
+- formacion: courses, books, educational materials, certifications, conferences, workshops
+- donaciones: NGOs, foundations, political parties, charity, humanitarian aid
+- seguros: health insurance, life insurance, home insurance, vehicle insurance
+- suministros: electricity, water, gas, internet, mobile phone, coworking
+- transporte: fuel, tolls, public transport, parking, vehicle maintenance (if work-related)
+- vivienda: home repairs, maintenance, energy efficiency improvements, furniture for home office
+- actividad_profesional: software subscriptions, hosting, domains, professional tools, office supplies, hardware
 - potencialmente_deducible: doesn't clearly fit above but MIGHT be deductible — WHEN IN DOUBT, USE THIS
-- no_deducible: clearly personal leisure, restaurants, entertainment, groceries, clothing, subscriptions
+- no_deducible: ONLY for things that are clearly personal leisure with zero chance of being deductible: restaurants with friends, cinema, videogames, clothing, supermarket groceries, alcohol, tobacco
 
-CRITICAL RULE: If there is ANY doubt about whether an expense could be deductible, classify as "potencialmente_deducible". It is much better to have false positives than to miss a real deduction. The taxpayer will review manually.
+CRITICAL RULES:
+1. If there is ANY doubt, classify as "potencialmente_deducible". Better 100 false positives than 1 missed deduction.
+2. Transfers between own accounts, ATM withdrawals, and loan payments are "no_deducible" (not real expenses).
+3. Bizum/transfers to individuals: "potencialmente_deducible" (could be payments for services).
 
 For each expense, return JSON:
 {
@@ -46,6 +38,19 @@ For each expense, return JSON:
 }
 
 Return a JSON array, same order as input."""
+
+FISCAL_CATEGORIES = [
+    "sanitario",
+    "formacion",
+    "donaciones",
+    "seguros",
+    "suministros",
+    "transporte",
+    "vivienda",
+    "actividad_profesional",
+    "potencialmente_deducible",
+    "no_deducible",
+]
 
 BATCH_SIZE = 25
 

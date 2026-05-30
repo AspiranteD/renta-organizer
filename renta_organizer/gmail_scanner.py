@@ -106,7 +106,7 @@ def scan_account(
     raw_pdfs_dir.mkdir(parents=True, exist_ok=True)
 
     date_start = f"{year}/01/01"
-    date_end = f"{year}/12/31"
+    date_end = f"{year + 1}/01/01"
 
     query = f"{INVOICE_QUERY} after:{date_start} before:{date_end}"
     logger.info("[%s] Buscando facturas: %s", account.email, query)
