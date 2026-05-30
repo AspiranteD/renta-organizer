@@ -1,0 +1,14 @@
+# List your Gmail accounts here.
+# Each account will be scanned for invoices/receipts.
+# On first run, a browser window opens for each account to authorize.
+
+accounts:
+  - email: your-email@gmail.com
+    label: personal
+    token_path: tokens/personal.json
+
+  # - email: another@gmail.com
+  #   label: work
+  #   token_path: tokens/work.json
+
+credentials_path: gmail_oauth_credentials.json

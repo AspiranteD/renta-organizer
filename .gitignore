@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+tokens/
+output/
+input/bancos/*.csv
+input/bancos/*.xls*
+gmail_oauth_credentials.json
+*.egg-info/
+dist/
+build/
+.pytest_cache/

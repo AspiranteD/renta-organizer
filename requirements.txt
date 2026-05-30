@@ -1,0 +1,9 @@
+google-auth
+google-auth-oauthlib
+google-api-python-client
+python-dotenv
+openai
+openpyxl
+pdfplumber
+chardet
+pyyaml
