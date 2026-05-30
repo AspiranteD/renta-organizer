@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pdfplumber
 
+from renta_organizer.cache import ResultCache, make_pdf_key
+
 logger = logging.getLogger(__name__)
 
 CIF_PATTERN = re.compile(r"\b[A-Z]\d{8}\b|[A-Z]-?\d{7}-?[A-Z0-9]")
@@ -194,22 +196,50 @@ def extract_all_pdfs(
     pdf_dir: Path,
     api_key: str = "",
     vision_model: str = "gpt-4o",
+    cache: ResultCache | None = None,
 ) -> list[InvoiceData]:
-    """Extract data from all PDFs in a directory."""
+    """Extract data from all PDFs in a directory. Uses cache to skip re-processing."""
     if not pdf_dir.exists():
         return []
 
     results = []
     pdfs = sorted(pdf_dir.glob("*.pdf"))
     logger.info("Extrayendo datos de %d PDFs...", len(pdfs))
+    cached_count = 0
 
     for i, path in enumerate(pdfs, 1):
+        key = make_pdf_key(str(path), path.stat().st_size)
+
+        if cache and cache.has(key):
+            hit = cache.get(key)
+            results.append(InvoiceData(
+                file_path=str(path),
+                issuer=hit.get("issuer", ""),
+                cif=hit.get("cif", ""),
+                date=hit.get("date", ""),
+                total_amount=hit.get("total_amount"),
+                description=hit.get("description", ""),
+                raw_text="[from cache]",
+                extraction_method=hit.get("extraction_method", "cache"),
+                confidence=hit.get("confidence", 0.5),
+            ))
+            cached_count += 1
+            continue
+
         if i % 10 == 0:
             logger.info("  ... %d/%d procesados", i, len(pdfs))
+
         result = extract_invoice_data(path, api_key, vision_model)
         results.append(result)
 
+        if cache:
+            cache.set(key, result.to_dict())
+
+    if cache:
+        cache.save()
+
     vision_count = sum(1 for r in results if r.extraction_method == "vision")
-    logger.info("PDFs procesados: %d (texto: %d, vision: %d)",
-                len(results), len(results) - vision_count, vision_count)
+    logger.info("PDFs procesados: %d (cache: %d, texto: %d, vision: %d)",
+                len(results), cached_count,
+                len(results) - vision_count - cached_count, vision_count)
     return results

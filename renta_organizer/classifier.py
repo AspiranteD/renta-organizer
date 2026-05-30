@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from renta_organizer.bank_parser import BankTransaction
+from renta_organizer.cache import ResultCache, make_transaction_key
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +71,9 @@ def classify_transactions(
     transactions: list[BankTransaction],
     api_key: str,
     model: str = "gpt-4o-mini",
+    cache: ResultCache | None = None,
 ) -> list[ClassifiedExpense]:
-    """Classify bank transactions into fiscal categories."""
+    """Classify bank transactions into fiscal categories. Uses cache to skip API calls."""
     if not api_key:
         logger.warning("Sin API key — todos los gastos quedan como potencialmente_deducible")
         return [
@@ -86,11 +88,43 @@ def classify_transactions(
     income = [t for t in transactions if not t.is_expense]
 
     results: list[ClassifiedExpense] = []
+    to_classify: list[BankTransaction] = []
+    cached_count = 0
 
-    for i in range(0, len(expenses), BATCH_SIZE):
-        batch = expenses[i:i + BATCH_SIZE]
+    for t in expenses:
+        key = make_transaction_key(t.date_str, t.description, t.amount)
+        if cache and cache.has(key):
+            hit = cache.get(key)
+            results.append(ClassifiedExpense(
+                transaction=t,
+                category=hit["category"],
+                reason=hit["reason"] + " [cache]",
+                confidence=hit["confidence"],
+            ))
+            cached_count += 1
+        else:
+            to_classify.append(t)
+
+    if cached_count:
+        logger.info("Cache: %d gastos recuperados, %d pendientes de clasificar", cached_count, len(to_classify))
+
+    for i in range(0, len(to_classify), BATCH_SIZE):
+        batch = to_classify[i:i + BATCH_SIZE]
         classified = _classify_batch(batch, api_key, model)
-        results.extend(classified)
+        for exp in classified:
+            if cache:
+                key = make_transaction_key(
+                    exp.transaction.date_str, exp.transaction.description, exp.transaction.amount,
+                )
+                cache.set(key, {
+                    "category": exp.category,
+                    "reason": exp.reason,
+                    "confidence": exp.confidence,
+                })
+            results.append(exp)
+
+    if cache:
+        cache.save()
 
     for t in income:
         results.append(ClassifiedExpense(
@@ -98,7 +132,8 @@ def classify_transactions(
             reason="Ingreso (no gasto)", confidence=1.0,
         ))
 
-    logger.info("Clasificados: %d gastos + %d ingresos", len(expenses), len(income))
+    logger.info("Clasificados: %d gastos (%d cache + %d API) + %d ingresos",
+                len(expenses), cached_count, len(to_classify), len(income))
     return results
 
 

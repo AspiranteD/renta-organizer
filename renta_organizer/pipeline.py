@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 
 from renta_organizer.bank_parser import parse_all_bank_files
+from renta_organizer.cache import ResultCache
 from renta_organizer.classifier import ClassifiedExpense, classify_transactions
 from renta_organizer.config import Settings
 from renta_organizer.cross_reference import CrossReferenceReport, cross_reference
@@ -59,6 +60,13 @@ def run_pipeline(
         print("  [Parseo bancario omitido]")
         transactions = []
 
+    # --- Load caches ---
+    cache_dir = output_dir / ".cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    pdf_cache = ResultCache(cache_dir / "pdf_extractions.json")
+    classifier_cache = ResultCache(cache_dir / "classifications.json")
+    logger.info("Cache: %d PDFs, %d clasificaciones en cache", len(pdf_cache), len(classifier_cache))
+
     # --- Step 3: Extract data from PDFs ---
     print(f"\n{'='*50}")
     print(f"  PASO 3: Extrayendo datos de facturas PDF")
@@ -69,9 +77,13 @@ def run_pipeline(
         raw_pdfs_dir,
         api_key=settings.openai_api_key,
         vision_model=settings.vision_model,
+        cache=pdf_cache,
     )
     print(f"  {len(invoices)} facturas procesadas")
+    cached = sum(1 for i in invoices if i.extraction_method == "cache" or i.raw_text == "[from cache]")
     vision = sum(1 for i in invoices if i.extraction_method == "vision")
+    if cached:
+        print(f"  ({cached} desde cache, sin API)")
     if vision:
         print(f"  ({vision} necesitaron GPT-4o vision)")
 
@@ -82,6 +94,7 @@ def run_pipeline(
 
     classified = classify_transactions(
         transactions, settings.openai_api_key, settings.classifier_model,
+        cache=classifier_cache,
     )
     _print_classification_summary(classified)
 
